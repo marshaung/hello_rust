@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use clap::Parser;
 use colored::Colorize;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -20,24 +21,22 @@ fn add(left: u32, right: u32) -> u32 {
     left + right
 }
 
-fn main() {
-    let cli = Cli::parse();
-
-    // 彩色問候
-    for _ in 0..cli.count {
-        println!("{}", format!("Hello, {}!", cli.name).green().bold());
+fn greet(name: &str) -> Result<()> {
+    if name.is_empty() {
+        anyhow::bail!("名字不能是空的");
     }
+    println!("{}", format!("Hello, {}!", name).green().bold());
+    Ok(())
+}
 
-    // 計算結果用藍色顯示
-    println!("{}", format!("2 + 3 = {}", add(2, 3)).blue());
-
-    // 進度條示範
+fn run_progress() -> Result<()> {
     println!("\n{}", "載入中...".yellow());
+
     let pb = ProgressBar::new(10);
     pb.set_style(
         ProgressStyle::default_bar()
             .template("{bar:30.cyan/white} {pos}/{len} {msg}")
-            .unwrap(),
+            .context("進度條樣式設定失敗")?,
     );
 
     for i in 0..10 {
@@ -48,16 +47,40 @@ fn main() {
         thread::sleep(Duration::from_millis(80));
     }
     pb.finish();
+    Ok(())
+}
+
+fn main() -> Result<()> {
+    let cli = Cli::parse();
+
+    for _ in 0..cli.count {
+        greet(&cli.name)?;
+    }
+
+    println!("{}", format!("2 + 3 = {}", add(2, 3)).blue());
+
+    run_progress()?;
 
     println!("{}", "✓ 全部完成".green());
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::add;
+    use super::*;
 
     #[test]
     fn adds_two_numbers() {
         assert_eq!(add(2, 3), 5);
+    }
+
+    #[test]
+    fn greet_empty_name_fails() {
+        assert!(greet("").is_err());
+    }
+
+    #[test]
+    fn greet_valid_name_ok() {
+        assert!(greet("Mars").is_ok());
     }
 }
